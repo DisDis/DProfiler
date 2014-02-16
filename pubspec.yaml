@@ -1,0 +1,8 @@
+name: dprofiler
+description: A sample command-line application
+dependencies:
+  analyzer_experimental: any
+  args: any
+  http_server: any
+  logging: any
+  route: any
