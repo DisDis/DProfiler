@@ -17,17 +17,16 @@ void main(List<String> args) {
   Logger.root.info("---== Start Application ==---");
   Logger.root.info("");
   var parser = new ArgParser();
-  parser.addOption("mode", abbr: "m", defaultsTo: "profiler");
-  parser.addOption("entry", abbr: "e");
+  parser.addOption("mode", abbr: "m", defaultsTo: "profiler", help:"Mode",allowed:["profiler","report"]);
+  parser.addOption("entry", abbr: "e", help:"Main dart file");
+  parser.addOption("reportOutputDir", abbr: "d", help:"Report output directory");
+  parser.addOption("reportFile", abbr: "f", help:"Report file (*.profiler)");
+  print(parser.getUsage());
   var result = parser.parse(args);
   var mode = result["mode"];
   if (mode == "report") {
-    new ReportView("test1.dart.profiler").generateHtmls("./reports/");
+    new ReportView(result["reportFile"]).generateHtmls(result["reportOutputDir"]);
   } else if (mode == "profiler") {
     CodeWrapper cw = new CodeWrapper();cw.entryPoint(result["entry"]);
-  } else {
-    parser.options.forEach((k, v) {
-      print("$k");
-    });
   }
 }
