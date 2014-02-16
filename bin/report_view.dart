@@ -90,6 +90,7 @@ class ReportView {
        f.createSync(recursive: true);
      }
      f.writeAsStringSync(_generateHtml(file.id));
+     print("generate: ${f.absolute.path}");
     });
   }
   

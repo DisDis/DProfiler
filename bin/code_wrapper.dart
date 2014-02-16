@@ -242,6 +242,9 @@ class DProfilerExt extends DProfiler{
 """);
     var file = new File(importFile);
     file.writeAsStringSync(sb.toString());
+    
+    print("Execute: dart $fileName.profiler.dart");
+    print("Show report: dprofiler -m report -d ./reports/ -f $fileName.profiler");
   }
 
   wrappingFile(String fileName) {
