@@ -3,7 +3,7 @@ import "package:args/args.dart";
 import "report_view.dart";
 import 'package:logging/logging.dart' show Logger, Level, LogRecord;
 
-
+String version = "0.0.1";
 
 void main(List<String> args) {
   Logger.root.level = Level.ALL;
@@ -13,9 +13,8 @@ void main(List<String> args) {
     print(msg);
     //stdout.writeln(msg);
   });
-  Logger.root.info("");
-  Logger.root.info("---== Start Application ==---");
-  Logger.root.info("");
+  Logger.root.info("---== Start Application v$version ==---");
+  Logger.root.info("${new DateTime.now()}");
   var parser = new ArgParser();
   parser.addOption("mode", abbr: "m", defaultsTo: "profiler", help:"Mode",allowed:["profiler","report"]);
   parser.addOption("entry", abbr: "e", help:"Main dart file");
