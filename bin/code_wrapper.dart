@@ -16,9 +16,10 @@ class CodeWrapper {
   int lastInjectId = -1;
   int globalResultId = 0;
   int globalTokenId = 0;
+  ImportDirective _firstImport = null;
   bool _isLibrary = true;
   String _projectRootPath;
-  static const String profileImport = "dprofiler.init.dart";
+  static const String profilerImport = "dprofiler.init.dart";
   static const String _PROFILER_SOURCE = "./lib/dprofiler.dart";
 
   String _currentFile;
@@ -53,7 +54,7 @@ class CodeWrapper {
     globalTokenId++;
   }
 
-  
+
 
   parseMethodInvocation(MethodInvocation mi) {
     mi.argumentList.arguments.forEach((arg) {
@@ -144,11 +145,19 @@ class CodeWrapper {
   }
 
   parseFunctionExpression(FunctionExpression fe) {
-    Block block = fe.body.block;
-    if (block == null) {
-      return;
+    try{
+    BlockFunctionBody bfb = fe.body as BlockFunctionBody;
+    if (bfb != null) {
+      Block block = bfb.block;
+      if (block == null) {
+        return;
+      }
+      parseBlock(block);
     }
-    parseBlock(block);
+  }catch(e){
+        print("${fe} ${fe.body.runtimeType} ${fe.body}");
+        throw e;
+      }
   }
 
   void parseDeclaration(Declaration dec) {
@@ -206,12 +215,23 @@ class CodeWrapper {
   }
 
   void parseMethodDeclaration(MethodDeclaration member) {
-    //print("${member.runtimeType} $member");
-    Block block = member.body.block;
-    if (block == null) {
+    if (member.body is ExpressionFunctionBody){
       return;
     }
-    parseBlock(block);
+    try{
+    BlockFunctionBody bfb = member.body as BlockFunctionBody;
+    if (bfb != null) {
+      Block block = bfb.block;
+      if (block == null) {
+        return;
+      }
+      parseBlock(block);
+    }
+    }catch(e){
+      print("${member} ${member.body.runtimeType} ${member.body}");
+      throw e;
+    }
+
   }
 
   entryPoint(String fileName) {
@@ -222,7 +242,7 @@ class CodeWrapper {
     var fileDir = path.dirname(_currentFile);
     _projectRootPath = fileDir;
     wrappingFile(fileName);
-    var importFile = path.join(_projectRootPath, profileImport);
+    var importFile = path.join(_projectRootPath, profilerImport);
     StringBuffer sb = new StringBuffer(new File(_PROFILER_SOURCE
         ).readAsStringSync());
 
@@ -234,7 +254,7 @@ class DProfilerExt extends DProfiler{
     var instance = this;
 """
         );
-    _tokenFileInfo.forEach((item){
+    _tokenFileInfo.forEach((item) {
       sb.writeln(item);
     });
     sb.write("""  }
@@ -242,14 +262,16 @@ class DProfilerExt extends DProfiler{
 """);
     var file = new File(importFile);
     file.writeAsStringSync(sb.toString());
-    
+
     print("Execute: dart $fileName.profiler.dart");
-    print("Show report: dprofiler -m report -d ./reports/ -f $fileName.profiler");
+    print("Show report: dprofiler -m report -d ./reports/ -f $fileName.profiler"
+        );
   }
 
   wrappingFile(String fileName) {
     _injector.clear();
     File f = new File(fileName);
+    _firstImport = null;
     _currentFile = f.absolute.path;
     _mainFunction = null;
     _isLibrary = true;
@@ -269,18 +291,26 @@ class DProfilerExt extends DProfiler{
     cu.directives.forEach((dir) {
       if (dir is ImportDirective) {
         _isLibrary = false;
+        if (_firstImport ==null){
+          _firstImport = dir;
+        }
+      }
+      if (dir is PartOfDirective) {
+        _isLibrary = true;
       }
     });
 
     cu.directives.forEach((dir) {
-          if (dir is ImportDirective) {
-            var importFile = path.join(fileDir, dir.uri.stringValue);
-            var f = new File(importFile);
-            if (f.existsSync()) {
-              _replaceFileImport(dir);
-            }
-          }
-        });
+      if (dir is ImportDirective) {
+        var importFile = path.join(fileDir, dir.uri.stringValue);
+        var f = new File(importFile);
+        if (f.existsSync()) {
+          _replaceFileImport(dir.uri);
+        }
+      } else if (dir is PartDirective) {
+        _replaceFileImport(dir.uri);
+      }
+    });
     _saveFile();
     _tokenFileInfo.add(_tokenInfoToBuffer());
     _tokens.clear();
@@ -292,13 +322,17 @@ class DProfilerExt extends DProfiler{
           wrappingFile(importFile);
         }
       }
+      if (dir is PartDirective) {
+        var importFile = path.join(fileDir, dir.uri.stringValue);
+        wrappingFile(importFile);
+      }
     });
   }
-  
-  _replaceFileImport(ImportDirective dir) {
+
+  _replaceFileImport(StringLiteral uri) {
     //dir.uri.beginToken.offset;
     //dir.uri.endToken.end;
-    _injector.injection(dir.uri.endToken.end-1,".profiler.dart");
+    _injector.injection(uri.endToken.end - 1, ".profiler.dart");
   }
 
   void _saveFile() {
@@ -311,8 +345,8 @@ class DProfilerExt extends DProfiler{
   String _getWrapperSource() {
     StringBuffer sb = new StringBuffer();
     if (!_isLibrary) {
-      var importFile = path.join(_projectRootPath, profileImport);
-      sb.writeln("import \"$importFile\";");
+      var importFile = path.join(_projectRootPath, profilerImport);
+      _injector.injection(_firstImport.endToken.end, "import \"$importFile\";");
     }
     int index = 0;
     sourceChars.forEach((char) {

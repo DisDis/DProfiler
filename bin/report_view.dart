@@ -84,7 +84,7 @@ class ReportView {
 
   void generateHtmls(String outputDir){
     _files.forEach((file){
-      var genName = file.filename.replaceAll(path.separator,"_")+".html";
+      var genName = file.filename.replaceAll(path.separator,"_").replaceAll(".","_")+".html";
      var f= new File(path.join(outputDir,genName));
      if (!f.existsSync()){
        f.createSync(recursive: true);
@@ -98,8 +98,11 @@ class ReportView {
     StringBuffer sb = new StringBuffer();
     List<DProfilerToken> tokens = _tokens[fileId];
     DProfilerFile file = _files[fileId];
+    if (tokens == null){
+          print("Not found tokens for $fileId:$file");
+          return "EMPTY";
+    }
     var fileContent = new File(file.filename).readAsStringSync();
-    //fileContent = fileContent.replaceAll(" ", new String.fromCharCode(1));
     CodeInjector _injector = new CodeInjector();
     int maxTotal = 1;
     tokens.forEach((token) {

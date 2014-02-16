@@ -6,6 +6,8 @@ class DProfilerFile {
   final String filename;
   final int id;
   DProfilerFile(this.id, this.filename);
+  
+  toString()=> filename;
 }
 class DProfilerToken {
   final int id;
